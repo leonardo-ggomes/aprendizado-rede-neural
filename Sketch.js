@@ -32,7 +32,7 @@ function setup() {
 function draw() {
     background(COLORS.bg);
     
-    if (currentError > 0.001) {
+    if (currentError > 0.01) {
         for (let i = 0; i < 10000; i++) {
             const r = Math.floor(Math.random() * dataset.inputs.length);
             nn.train(dataset.inputs[r], dataset.outputs[r]);
@@ -188,4 +188,5 @@ function drawLayerNodes(x, yArray, labelPrefix, colorHex) {
 }
 
 window.setup = setup;
+
 window.draw = draw;
