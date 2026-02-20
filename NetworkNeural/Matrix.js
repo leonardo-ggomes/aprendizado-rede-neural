@@ -10,7 +10,7 @@ class Matrix{
 
     randomize(){
         this.data = this.data.map(row => 
-            row.map(() => +(Math.random() * 2 - 1).toFixed(4))
+            row.map(() => Math.random() * 2 - 1)
         );
     }    
 
@@ -64,7 +64,7 @@ class Matrix{
                 for (let k = 0; k < A.cols; k++) {
                     sum += A.data[i][k] * B.data[k][j];
                 }
-                return +sum.toFixed(4);
+                return sum;
             });
 
         });
@@ -79,7 +79,7 @@ class Matrix{
 
         for (let i = 0; i < A.rows; i++) {
             for (let j = 0; j < B.cols; j++) {
-                m.data[i][j] = +(A.data[i][0] * B.data[0][j]).toFixed(4)
+                m.data[i][j] = A.data[i][0] * B.data[0][j]
             }
         }
 
@@ -131,15 +131,6 @@ class Matrix{
 
         return m
     } 
-
-    sum(){        
-        let m = new Matrix(1, this.rows)
-        this.data.map((row, index) => {  
-            m.data[0][index] = row.reduce((v, i, r) => v+i) 
-        })
-
-        return m
-    }
 
    
     print(){

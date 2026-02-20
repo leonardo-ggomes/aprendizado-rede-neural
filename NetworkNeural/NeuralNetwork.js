@@ -1,90 +1,94 @@
 import Matrix from "./Matrix.js";
 
-class NeuralNetwork{
+class NeuralNetwork {
+    constructor(i_nodes, h_nodes, o_nodes) {
+        this.i_nodes = i_nodes;
+        this.h_nodes = h_nodes;
+        this.o_nodes = o_nodes;
+        this.learning_rate = 0.1; 
 
-    learning_rating = 0.1
+        // Pesos independentes para cada camada
+        this.weights_ih = new Matrix(h_nodes, i_nodes);
+        this.weights_ho = new Matrix(o_nodes, h_nodes);
+        this.weights_ih.randomize();
+        this.weights_ho.randomize();
 
-    constructor(i_nodes, h_nodes, o_nodes){
-        this.i_nodes = i_nodes
-        this.h_nodes = h_nodes
-        this.o_nodes = o_nodes
-
-        this.i_weights = new Matrix(h_nodes, i_nodes)
-        this.i_weights.randomize()
-
-        this.I_BIAS = new Matrix(h_nodes, 1)
-        this.I_BIAS.randomize()
+        // Bias independentes para cada camada
+        this.bias_h = new Matrix(h_nodes, 1);
+        this.bias_o = new Matrix(o_nodes, 1);
+        this.bias_h.randomize();
+        this.bias_o.randomize();
     }
 
-    static sigmoid(x){
-        return +(1 / (1 + Math.exp(-x))).toFixed(4)
+    static sigmoid(x) {
+        return 1 / (1 + Math.exp(-x)); 
     }
 
-    static dsigmoid(x){
-        return +(x * (1 - x)).toFixed(4)
+    static dsigmoid(x) {
+        return x * (1 - x); 
     }
 
-    train(inputs, target){
-        /** FeedFoward */
-        //Input to Hidden
-        const I = Matrix.arrayToMatrix(inputs)
-        const W_I = Matrix.multiply(this.i_weights, I)
-        const W_H = Matrix.add(W_I, this.I_BIAS)
-
-        //Activation function
-        W_H.map(NeuralNetwork.sigmoid)    
+    train(inputs, target) {
+        // --- FeedFoward ---
+        let input = Matrix.arrayToMatrix(inputs);
         
-        //Sigmoid Output
-        const W_Ho = this.i_weights.sum()  
-        const O = Matrix.multiply(W_Ho, W_H)
-        const H = Matrix.add(O, this.I_BIAS)
-      
-        //Output
-        const predict = H.map(NeuralNetwork.sigmoid)
-      
+        // Input -> Hidden
+        let hidden = Matrix.multiply(this.weights_ih, input);
+        hidden = Matrix.add(hidden, this.bias_h);
+        hidden.map(NeuralNetwork.sigmoid);
 
-        /** Backpropagation */
-        // Step - 1 
-        const matrix_error = Matrix.arrayToMatrix(target)       
-        const E_o = Matrix.subtract(matrix_error, predict)
-      
-        // Step - 2 : Output to Hidden
-        const dsigmoid_error = Matrix.map(E_o, NeuralNetwork.dsigmoid)
+        // Hidden -> Output
+        let output = Matrix.multiply(this.weights_ho, hidden);
+        output = Matrix.add(output, this.bias_o);
+        output.map(NeuralNetwork.sigmoid);
 
-        //How many steps do I need get?
-        const hadmard_product = Matrix.hadamard(dsigmoid_error, E_o)  
-        const Go = Matrix.multiply_scalar(hadmard_product, this.learning_rating)       
+        // --- BACKPROPAGATION ---
+        let targets = Matrix.arrayToMatrix(target);
+        let output_errors = Matrix.subtract(targets, output);
 
-        const W_Ht = Matrix.transpose(W_H)   
-        const W_Hto = Matrix.outerProduct(Go, W_Ht)
-        this.W_Hfinal = Matrix.add(W_Ho,W_Hto)
+        // 1. Calcular Gradiente da Saída
+        // Gradiente = dsigmoid(output) * erro * learning_rate
+        let gradients = Matrix.map(output, NeuralNetwork.dsigmoid);
+        gradients = Matrix.hadamard(gradients, output_errors);
+        gradients = Matrix.multiply_scalar(gradients, this.learning_rate);
 
-        // Step - 3 : Hidden to Input        
-        const E_h = Matrix.outerProduct(E_o, W_Ho)
-        const D_W_Ho = W_Ho.map(NeuralNetwork.dsigmoid)
-        const D_Ho_hadamard = Matrix.hadamard(D_W_Ho,E_h)
-        const G_h = Matrix.multiply_scalar(D_Ho_hadamard, this.learning_rating)
-  
-        const W_ih = Matrix.outerProduct(I, G_h)  
-        this.i_weights = Matrix.transpose(W_ih)
+        // 2. Calcular Deltas de Hidden -> Output
+        let hidden_T = Matrix.transpose(hidden);
+        let weights_ho_deltas = Matrix.multiply(gradients, hidden_T);
+
+        // Atualizar Pesos e Bias da Saída (SOMA, não substituição)
+        this.weights_ho = Matrix.add(this.weights_ho, weights_ho_deltas);
+        this.bias_o = Matrix.add(this.bias_o, gradients);
+
+        // 3. Calcular Erro da Camada Oculta (Retropropagação)
+        let who_T = Matrix.transpose(this.weights_ho);
+        let hidden_errors = Matrix.multiply(who_T, output_errors);
+
+        // 4. Calcular Gradiente da Camada Oculta
+        let hidden_gradient = Matrix.map(hidden, NeuralNetwork.dsigmoid);
+        hidden_gradient = Matrix.hadamard(hidden_gradient, hidden_errors);
+        hidden_gradient = Matrix.multiply_scalar(hidden_gradient, this.learning_rate);
+
+        // 5. Calcular Deltas de Input -> Hidden
+        let input_T = Matrix.transpose(input);
+        let weights_ih_deltas = Matrix.multiply(hidden_gradient, input_T);
+
+        // Atualizar Pesos e Bias da Entrada
+        this.weights_ih = Matrix.add(this.weights_ih, weights_ih_deltas);
+        this.bias_h = Matrix.add(this.bias_h, hidden_gradient);
     }
 
+    predict(inputs) {
+        let input = Matrix.arrayToMatrix(inputs);
+        let hidden = Matrix.multiply(this.weights_ih, input);
+        hidden = Matrix.add(hidden, this.bias_h);
+        hidden.map(NeuralNetwork.sigmoid);
 
-    predict(inputs){
-        const I = Matrix.arrayToMatrix(inputs)
-        const W_I = Matrix.multiply(this.i_weights, I)
-        const W_H = Matrix.add(W_I, this.I_BIAS)
+        let output = Matrix.multiply(this.weights_ho, hidden);
+        output = Matrix.add(output, this.bias_o);
+        output.map(NeuralNetwork.sigmoid);
 
-        //Activation function
-        W_H.map(NeuralNetwork.sigmoid)            
-      
-        const O = Matrix.multiply(this.W_Hfinal, W_H)
-        const H = Matrix.add(O, this.I_BIAS)
-      
-        //Output
-        const predict = H.map(NeuralNetwork.sigmoid)        
-        return predict;
+        return output.data; // Retorna o array de resultados
     }
 }
-
-export default NeuralNetwork
+export default NeuralNetwork;
